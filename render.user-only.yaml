@@ -1,0 +1,33 @@
+# Minimal Render Blueprint — user-service + Postgres only (best for free tier testing)
+# BackendMicro (kidakai12 account)
+#
+# In Render: New → Blueprint → select this file if your UI allows a custom path,
+# OR rename/copy to render.yaml before connecting the repo.
+
+databases:
+  - name: backendmicro-user-db
+    databaseName: user_db
+    user: platform
+    plan: free
+
+services:
+  - type: web
+    name: backendmicro-user-service
+    runtime: docker
+    plan: free
+    rootDir: services/user-service
+    dockerfilePath: Dockerfile
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: backendmicro-user-db
+          property: connectionString
+      - key: JWT_SECRET_KEY
+        generateValue: true
+      - key: JWT_ACCESS_TOKEN_EXPIRE_MINUTES
+        value: "60"
+      - key: CORS_ORIGINS
+        value: http://localhost:3000,http://localhost:8080
+      - key: DEBUG
+        value: "false"

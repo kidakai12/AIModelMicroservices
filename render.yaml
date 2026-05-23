@@ -1,0 +1,62 @@
+# Render Blueprint — https://render.com/docs/blueprint-spec
+#
+# Project: BackendMicro (kidakai12 account)
+# Deploy: connect this GitHub repo → New → Blueprint → apply render.yaml
+# Free tier: services sleep after ~15 min idle; Postgres free DB has limits (see Render docs).
+
+databases:
+  - name: backendmicro-user-db
+    databaseName: user_db
+    user: platform
+    plan: free
+
+services:
+  # --- Primary API (auth & users) ---
+  - type: web
+    name: backendmicro-user-service
+    runtime: docker
+    plan: free
+    rootDir: services/user-service
+    dockerfilePath: Dockerfile
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: backendmicro-user-db
+          property: connectionString
+      - key: JWT_SECRET_KEY
+        generateValue: true
+      - key: JWT_ACCESS_TOKEN_EXPIRE_MINUTES
+        value: "60"
+      - key: CORS_ORIGINS
+        value: http://localhost:3000,http://localhost:8080
+      - key: DEBUG
+        value: "false"
+
+  # --- Stubs (optional on free tier — delete in dashboard if you only want user-service) ---
+  - type: web
+    name: backendmicro-training-service
+    runtime: python
+    plan: free
+    rootDir: services/training-service
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+
+  - type: web
+    name: backendmicro-model-zoo-service
+    runtime: python
+    plan: free
+    rootDir: services/model-zoo-service
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+
+  - type: web
+    name: backendmicro-toolbox-service
+    runtime: python
+    plan: free
+    rootDir: services/toolbox-service
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
