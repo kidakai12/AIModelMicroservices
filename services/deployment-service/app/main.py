@@ -5,19 +5,16 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
 from app.database import engine
-from app.routers import internal, models
-from app.storage import ensure_storage_root
+from app.routers import deployments
 
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
-    ensure_storage_root()
     yield
     await engine.dispose()
 
 
 app = FastAPI(title=settings.app_name, version="0.1.0", lifespan=lifespan)
-
 origins = [o.strip() for o in settings.cors_origins.split(",") if o.strip()]
 app.add_middleware(
     CORSMiddleware,
@@ -26,9 +23,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-app.include_router(models.router, prefix=settings.api_v1_prefix)
-app.include_router(internal.router)
+app.include_router(deployments.router, prefix=settings.api_v1_prefix)
 
 
 @app.get("/health")

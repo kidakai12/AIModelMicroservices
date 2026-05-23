@@ -3,8 +3,10 @@
 Python microservices backend for an IoT-focused AI model training platform (inspired by MaixHub-style workflows).
 **Account:** kidakai12
 
-**Implemented now:** `user-service` (register, login, JWT, profile)  
-**Planned services:** `training-service`, `model-zoo-service`, `toolbox-service`
+**Implemented now:** `user-service`, `model-zoo-service`, `app-store-service`, `deployment-service`  
+**Planned stubs:** `training-service`, `toolbox-service`
+
+API guide: **[docs/api-model-app-deploy.md](docs/api-model-app-deploy.md)**
 
 ## Tech stack recommendation
 
@@ -21,29 +23,58 @@ For **IoT + cloud training + model artifacts**, Python (FastAPI) + PostgreSQL + 
 
 ```
                     ┌─────────────┐
-   Clients ────────►│   Gateway   │ :8080
+   Clients ────────►│   Gateway   │ :8080  ← use this for all API calls
                     │   (nginx)   │
                     └──────┬──────┘
            ┌───────────────┼───────────────┬──────────────┐
            ▼               ▼               ▼              ▼
-    user-service    training-service  model-zoo-service  toolbox-service
-    (PostgreSQL)         (stub)            (stub)           (stub)
+    user-service    model-zoo-service  app-store-service  deployment-service
+                         (+ training/toolbox stubs)
 ```
 
-## Quick start (Docker — recommended)
+**Ports explained:** [docs/microservices-and-ports.md](docs/microservices-and-ports.md)
 
-**Requirements:** Docker Desktop
+| Purpose | URL |
+|---------|-----|
+| **API (production-style)** | http://localhost:8080 |
+| **Swagger (dev only)** | :8000 users · :8001 models · :8002 apps · :8003 deploy |
+
+## Quick start — Supabase local + Docker (recommended for testing)
+
+Uses **Supabase CLI** for Postgres/Studio and **Docker Compose** for FastAPI microservices.
+
+**Requirements:** Docker Desktop + [Supabase CLI](https://supabase.com/docs/guides/cli/getting-started)
 
 ```powershell
 cd "c:\Users\vohoc\Project\New folder"
-copy .env.example .env
-# Edit .env — set JWT_SECRET_KEY to a long random string
+copy .env.supabase.example .env.supabase
 
+supabase start
+docker compose -f docker-compose.supabase.yml --env-file .env.supabase up --build
+```
+
+| URL | Purpose |
+|-----|---------|
+| http://localhost:8080 | API gateway (register/login) |
+| http://localhost:8000/docs | Swagger (user-service direct) |
+| http://127.0.0.1:54323 | Supabase Studio (DB UI) |
+
+How it fits together: **[deploy/supabase/README.md](deploy/supabase/README.md)**
+
+Or run: `.\scripts\start-local-supabase.ps1`
+
+---
+
+## Quick start — Docker only (bundled Postgres)
+
+No Supabase CLI; includes a Postgres container in Compose.
+
+```powershell
+copy .env.example .env
 docker compose up --build
 ```
 
-Gateway: http://localhost:8080  
-User API docs (direct): http://localhost:8000/docs — only if you expose user-service; via gateway use paths below.
+Gateway: http://localhost:8080
 
 ### API examples (via gateway :8080)
 
@@ -113,13 +144,19 @@ Open http://localhost:8000/docs
 ├── services/
 │   ├── user-service/       # ✅ Auth & users
 │   ├── training-service/   # 🔜 Cloud training
-│   ├── model-zoo-service/  # 🔜 Model catalog
+│   ├── model-zoo-service/  # ✅ Model catalog
+│   ├── app-store-service/  # ✅ App packages (ZIP)
+│   ├── deployment-service/ # ✅ QR deploy to device
 │   └── toolbox-service/    # 🔜 Model conversion
-├── render.yaml             # Render Blueprint (all services)
-├── render.user-only.yaml   # Render Blueprint (user-service only — recommended for free tier)
+├── docker-compose.yml          # Local: bundled Postgres + all services
+├── docker-compose.supabase.yml # Local: FastAPI stack → Supabase Postgres on host
+├── supabase/                   # Supabase CLI config (supabase start)
+├── render.yaml                 # Render Blueprint (all services)
+├── render.user-only.yaml       # Render — user-service only
 └── deploy/
-    ├── render/             # Render setup guide
-    └── digitalocean/       # DO deployment notes
+    ├── supabase/               # Supabase + Docker how-to
+    ├── render/
+    └── digitalocean/
 ```
 
 ## Deploy on Render (free tier — test before production)
@@ -142,10 +179,12 @@ See [deploy/digitalocean/README.md](deploy/digitalocean/README.md) for:
 ## Roadmap
 
 1. ✅ User service — register, login, JWT, `/users/me`
-2. Training service — datasets, jobs, WebSocket progress
-3. Model zoo — metadata DB + object storage (Spaces)
-4. Toolbox — async convert workers
-5. Shared auth middleware package for internal service calls
+2. ✅ Model Zoo — upload, browse, download models
+3. ✅ App Store — upload, browse, download app ZIPs
+4. ✅ Deployment — QR + tokenized device download
+5. Training service — datasets, jobs, WebSocket progress
+6. Toolbox — async convert workers
+7. Shared auth middleware package for internal service calls
 
 ## License
 
